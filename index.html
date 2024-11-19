@@ -340,6 +340,56 @@
         .urgent::before {
             background: #ef4444;
         }
+
+        /* 任务详情模态框样式 */
+        .task-detail-content {
+            margin-top: 20px;
+        }
+
+        .detail-group {
+            margin-bottom: 20px;
+        }
+
+        .detail-group label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .detail-text {
+            font-size: 16px;
+            color: var(--text-color);
+            padding: 8px 0;
+            line-height: 1.5;
+        }
+
+        .detail-actions {
+            margin-top: 32px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .delete-btn {
+            background: #ef4444 !important;
+            color: white !important;
+        }
+
+        /* 让任务条更像可点击的样式 */
+        .task {
+            position: relative;
+            padding-right: 24px;
+        }
+
+        .task::after {
+            content: '›';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
@@ -394,9 +444,36 @@
         </div>
     </div>
 
+    <div class="modal" id="task-detail-modal">
+        <div class="modal-content">
+            <h2>任务详情</h2>
+            <div class="task-detail-content">
+                <div class="detail-group">
+                    <label>任务名称</label>
+                    <div id="detail-title" class="detail-text"></div>
+                </div>
+                <div class="detail-group">
+                    <label>截止日期</label>
+                    <div id="detail-date" class="detail-text"></div>
+                </div>
+                <div class="detail-group">
+                    <label>描述</label>
+                    <div id="detail-description" class="detail-text"></div>
+                </div>
+                <div class="detail-actions">
+                    <button type="button" onclick="deleteTask()" class="delete-btn">删除任务</button>
+                    <button type="button" onclick="hideTaskDetailModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentDate = new Date();
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        // 添加当前查看的任务索引变量
+        let currentTaskIndex = -1;
 
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
@@ -467,10 +544,16 @@
                            taskDate.getFullYear() === currentDate.getFullYear();
                 });
 
-                dayTasks.forEach(task => {
+                dayTasks.forEach((task, index) => {
                     const taskElement = document.createElement('div');
                     taskElement.className = 'task';
                     taskElement.textContent = task.title;
+                    taskElement.onclick = () => showTaskDetail(
+                        tasks.findIndex(t => 
+                            t.title === task.title && 
+                            t.date === task.date
+                        )
+                    );
                     cell.appendChild(taskElement);
                 });
 
@@ -503,13 +586,19 @@
             // 对任务按日期排序
             const sortedTasks = [...tasks].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            sortedTasks.forEach(task => {
+            sortedTasks.forEach((task, index) => {
                 const taskDate = new Date(task.date);
                 const today = new Date();
                 const isUrgent = taskDate < today;
 
                 const timelineItem = document.createElement('div');
                 timelineItem.className = `timeline-item ${isUrgent ? 'urgent' : ''}`;
+                timelineItem.onclick = () => showTaskDetail(
+                    tasks.findIndex(t => 
+                        t.title === task.title && 
+                        t.date === task.date
+                    )
+                );
 
                 const dateStr = taskDate.toLocaleDateString('zh-CN', {
                     month: 'long',
@@ -544,6 +633,47 @@
             hideAddTaskModal();
             this.reset();
         });
+
+        // 显示任务详情模态框
+        function showTaskDetail(taskIndex) {
+            currentTaskIndex = taskIndex;
+            const task = tasks[taskIndex];
+            
+            // 格式化日期
+            const taskDate = new Date(task.date);
+            const dateStr = taskDate.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+
+            // 填充详情内容
+            document.getElementById('detail-title').textContent = task.title;
+            document.getElementById('detail-date').textContent = dateStr;
+            document.getElementById('detail-description').textContent = 
+                task.description || '暂无描述';
+
+            // 显示模态框
+            document.getElementById('task-detail-modal').style.display = 'block';
+        }
+
+        // 隐藏任务详情模态框
+        function hideTaskDetailModal() {
+            document.getElementById('task-detail-modal').style.display = 'none';
+            currentTaskIndex = -1;
+        }
+
+        // 删除任务
+        function deleteTask() {
+            if (currentTaskIndex > -1) {
+                tasks.splice(currentTaskIndex, 1);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                renderCalendar();
+                updateTimeline();
+                hideTaskDetailModal();
+            }
+        }
 
         // 初始化
         renderCalendar();
