@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物联日历</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #60a5fa;
+            --primary-light: #93c5fd;
+            --primary-dark: #3b82f6;
+            --bg-color: #f0f9ff;
+            --text-color: #1e40af;
+            --border-color: #dbeafe;
+            --hover-color: #e0f2fe;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 40px 20px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .calendar-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(96, 165, 250, 0.1);
+            padding: 24px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding: 0 12px;
+        }
+
+        .calendar-header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .calendar-header button {
+            background: var(--hover-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--primary-dark);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .calendar-header button:hover {
+            background: var(--primary-light);
+            color: white;
+        }
+
+        #current-month {
+            font-size: 16px;
+            margin: 0 16px;
+            font-weight: 500;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-cell {
+            background: white;
+            min-height: 120px;
+            padding: 8px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .calendar-cell:hover {
+            background: var(--hover-color);
+        }
+
+        .date-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+
+        .task {
+            background: var(--hover-color);
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin: 4px 0;
+            font-size: 13px;
+            color: var(--primary-dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .task:hover {
+            background: var(--primary-light);
+            color: white;
+        }
+
+        .add-task-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+            transition: all 0.3s;
+        }
+
+        .add-task-btn:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 6px 16px rgba(96, 165, 250, 0.4);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(96, 165, 250, 0.2);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            width: 400px;
+            margin: 100px auto;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 24px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .modal-content button[type="submit"] {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        .modal-content button[type="button"] {
+            background: white;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-content button:hover {
+            opacity: 0.9;
+        }
+
+        .today {
+            background: var(--primary-color);
+            color: white !important;
+            border-radius: 50%;
+            font-weight: 500;
+        }
+
+        .weekend {
+            color: var(--primary-light) !important;
+        }
+
+        .calendar-header-cell {
+            background: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h1>物联日历</h1>
+            <div>
+                <button onclick="prevMonth()">上个月</button>
+                <span id="current-month">2024年3月</span>
+                <button onclick="nextMonth()">下个月</button>
+            </div>
+        </div>
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- 日历格子将通过 JavaScript 动态生成 -->
+        </div>
+    </div>
+
+    <button class="add-task-btn" onclick="showAddTaskModal()">+</button>
+
+    <div class="modal" id="add-task-modal">
+        <div class="modal-content">
+            <h2>添加新任务</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label>任务名称</label>
+                    <input type="text" id="task-title" required>
+                </div>
+                <div class="form-group">
+                    <label>日期</label>
+                    <input type="date" id="task-date" required>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="task-description"></textarea>
+                </div>
+                <button type="submit">保存</button>
+                <button type="button" onclick="hideAddTaskModal()">取消</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            document.getElementById('current-month').textContent = 
+                `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`;
+
+            // 添加星期头部
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            weekdays.forEach((day, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-header-cell';
+                // 周末的星期标记使用不同颜色
+                if (index === 0 || index === 6) {
+                    cell.style.color = 'var(--primary-light)';
+                }
+                cell.textContent = day;
+                grid.appendChild(cell);
+            });
+
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+            // 填充上个月的空白日期
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                grid.appendChild(cell);
+            }
+
+            // 填充当月日期
+            for (let date = 1; date <= lastDay.getDate(); date++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                
+                const dateNumber = document.createElement('div');
+                dateNumber.className = 'date-number';
+                
+                // 检查是否是今天
+                const today = new Date();
+                const isToday = date === today.getDate() && 
+                               currentDate.getMonth() === today.getMonth() &&
+                               currentDate.getFullYear() === today.getFullYear();
+                
+                // 检查是否是周末
+                const currentDateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
+                const dayOfWeek = currentDateObj.getDay();
+                
+                if (isToday) {
+                    dateNumber.classList.add('today');
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    dateNumber.classList.add('weekend');
+                }
+                
+                dateNumber.textContent = date;
+                cell.appendChild(dateNumber);
+
+                // 添加当天的任务
+                const dayTasks = tasks.filter(task => {
+                    const taskDate = new Date(task.date);
+                    return taskDate.getDate() === date && 
+                           taskDate.getMonth() === currentDate.getMonth() &&
+                           taskDate.getFullYear() === currentDate.getFullYear();
+                });
+
+                dayTasks.forEach(task => {
+                    const taskElement = document.createElement('div');
+                    taskElement.className = 'task';
+                    taskElement.textContent = task.title;
+                    cell.appendChild(taskElement);
+                });
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function prevMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function showAddTaskModal() {
+            document.getElementById('add-task-modal').style.display = 'block';
+        }
+
+        function hideAddTaskModal() {
+            document.getElementById('add-task-modal').style.display = 'none';
+        }
+
+        document.getElementById('task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const task = {
+                title: document.getElementById('task-title').value,
+                date: document.getElementById('task-date').value,
+                description: document.getElementById('task-description').value
+            };
+
+            tasks.push(task);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
+            renderCalendar();
+            hideAddTaskModal();
+            this.reset();
+        });
+
+        // 初始化日历
+        renderCalendar();
+    </script>
+</body>
+</html>
