@@ -390,6 +390,126 @@
             color: var(--primary-color);
             font-size: 18px;
         }
+
+        /* 移动端适配 */
+        @media screen and (max-width: 768px) {
+            .main-container {
+                padding: 12px;
+                margin: 0;
+            }
+
+            /* 在移动端隐藏日历视图 */
+            .calendar-container {
+                display: none;
+            }
+
+            /* 调整DDL容器样式 */
+            .deadline-container {
+                width: 100%;
+                padding: 16px;
+                margin: 0;
+            }
+
+            .deadline-header {
+                padding: 0 0 20px 0;
+                margin-bottom: 24px;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .deadline-header h2 {
+                font-size: 24px;
+                text-align: center;
+                color: var(--text-color);
+                font-weight: 500;
+            }
+
+            /* 优化时间轴样式 */
+            .timeline {
+                padding-left: 32px;
+            }
+
+            .timeline-item {
+                background: white;
+                padding: 16px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(96, 165, 250, 0.1);
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+
+            .timeline-item:active {
+                transform: scale(0.98);
+            }
+
+            .timeline-date {
+                font-size: 14px;
+                font-weight: 500;
+                margin-bottom: 8px;
+            }
+
+            /* 将任务显示为日程条样式 */
+            .timeline-task {
+                background: var(--hover-color);
+                border-left: 3px solid var(--primary-color);
+                padding: 12px;
+                border-radius: 6px;
+                margin-top: 8px;
+            }
+
+            .timeline-title {
+                font-size: 16px;
+                color: var(--primary-dark);
+                margin-bottom: 4px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .timeline-title::after {
+                content: '›';
+                color: var(--primary-color);
+                font-size: 20px;
+            }
+
+            .timeline-desc {
+                font-size: 13px;
+                color: #666;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            /* 紧急任务样式 */
+            .urgent .timeline-task {
+                background: #fee2e2;
+                border-left-color: #ef4444;
+            }
+
+            .urgent .timeline-title {
+                color: #ef4444;
+            }
+
+            .urgent .timeline-title::after {
+                color: #ef4444;
+            }
+
+            /* 调整添加按钮位置 */
+            .add-task-btn {
+                bottom: 24px;
+                right: 24px;
+                width: 52px;
+                height: 52px;
+            }
+
+            /* 优化模态框在移动端的显示 */
+            .modal-content {
+                width: 90%;
+                max-width: 400px;
+                margin: 60px auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -412,7 +532,7 @@
         <!-- 右侧DDL时间轴 -->
         <div class="deadline-container">
             <div class="deadline-header">
-                <h2>截止时间</h2>
+                <h2>物联日历</h2>
             </div>
             <div class="timeline" id="deadline-timeline">
                 <!-- 时间轴内容将通过 JavaScript 动态生成 -->
@@ -586,30 +706,48 @@
             // 对任务按日期排序
             const sortedTasks = [...tasks].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            sortedTasks.forEach((task, index) => {
-                const taskDate = new Date(task.date);
-                const today = new Date();
-                const isUrgent = taskDate < today;
-
-                const timelineItem = document.createElement('div');
-                timelineItem.className = `timeline-item ${isUrgent ? 'urgent' : ''}`;
-                timelineItem.onclick = () => showTaskDetail(
-                    tasks.findIndex(t => 
-                        t.title === task.title && 
-                        t.date === task.date
-                    )
-                );
-
-                const dateStr = taskDate.toLocaleDateString('zh-CN', {
+            // 按日期分组任务
+            const groupedTasks = {};
+            sortedTasks.forEach(task => {
+                const dateStr = new Date(task.date).toLocaleDateString('zh-CN', {
                     month: 'long',
                     day: 'numeric',
                     weekday: 'long'
                 });
+                if (!groupedTasks[dateStr]) {
+                    groupedTasks[dateStr] = [];
+                }
+                groupedTasks[dateStr].push(task);
+            });
+
+            // 渲染分组后的任务
+            Object.entries(groupedTasks).forEach(([dateStr, dateTasks]) => {
+                const timelineItem = document.createElement('div');
+                const today = new Date();
+                const taskDate = new Date(dateTasks[0].date);
+                const isUrgent = taskDate < today;
+
+                timelineItem.className = `timeline-item ${isUrgent ? 'urgent' : ''}`;
+
+                let tasksHtml = '';
+                dateTasks.forEach(task => {
+                    const taskIndex = tasks.findIndex(t => 
+                        t.title === task.title && t.date === task.date
+                    );
+                    
+                    tasksHtml += `
+                        <div class="timeline-task" onclick="showTaskDetail(${taskIndex})">
+                            <div class="timeline-title">${task.title}</div>
+                            ${task.description ? 
+                                `<div class="timeline-desc">${task.description}</div>` : 
+                                ''}
+                        </div>
+                    `;
+                });
 
                 timelineItem.innerHTML = `
                     <div class="timeline-date">${dateStr}</div>
-                    <div class="timeline-title">${task.title}</div>
-                    ${task.description ? `<div class="timeline-desc">${task.description}</div>` : ''}
+                    ${tasksHtml}
                 `;
 
                 timeline.appendChild(timelineItem);
@@ -678,6 +816,21 @@
         // 初始化
         renderCalendar();
         updateTimeline();
+
+        // 检测设备类型并初始化视图
+        function initMobileView() {
+            if (window.innerWidth <= 768) {
+                document.querySelector('.calendar-container').style.display = 'none';
+                document.querySelector('.deadline-container').style.display = 'block';
+            } else {
+                document.querySelector('.calendar-container').style.display = 'block';
+                document.querySelector('.deadline-container').style.display = 'block';
+            }
+        }
+
+        // 页面加载和窗口调整时初始化视图
+        window.addEventListener('load', initMobileView);
+        window.addEventListener('resize', initMobileView);
     </script>
 </body>
 </html>
